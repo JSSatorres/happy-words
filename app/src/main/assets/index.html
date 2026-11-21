@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Happy Words</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body { margin: 0; height: 100%; background: #FFF6D6; font-family: "Comic Sans MS", "Roboto", sans-serif; color: #3D2C1E; }
+  .screen { display: none; height: 100%; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+  .screen.on { display: flex; }
+  h1 { font-size: 44px; margin: 0 0 8px; color: #E76F51; }
+  p.sub { font-size: 20px; margin: 0 0 32px; }
+  .big-btn { font-size: 30px; font-weight: bold; padding: 18px 48px; border: none; border-radius: 40px; background: #2A9D8F; color: #fff; box-shadow: 0 6px 0 #1E7268; }
+  .big-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #1E7268; }
+  .logo { font-size: 90px; margin-bottom: 10px; }
+  .top { position: absolute; top: 12px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 20px; font-size: 22px; font-weight: bold; }
+  #game { position: relative; }
+  #pic { font-size: 150px; line-height: 1; margin: 40px 0 10px; cursor: pointer; transition: transform .2s; }
+  #pic.pop { transform: scale(1.2); }
+  .hint { font-size: 16px; opacity: .6; margin-bottom: 30px; }
+  #options { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 340px; }
+  .opt { font-size: 32px; font-weight: bold; padding: 16px; border: none; border-radius: 22px; background: #fff; color: #3D2C1E; box-shadow: 0 5px 0 #E0C98A; }
+  .opt.ok { background: #8AC926; color: #fff; box-shadow: 0 5px 0 #5E8C17; }
+  .opt.bad { background: #FF595E; color: #fff; box-shadow: 0 5px 0 #B53B3F; animation: shake .4s; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+  #stars { font-size: 40px; margin: 10px 0 30px; letter-spacing: 4px; white-space: pre-line; max-width: 340px; }
+</style>
+</head>
+<body>
+
+<div id="start" class="screen on">
+  <div class="logo">🐱🍎⭐</div>
+  <h1>Happy Words</h1>
+  <p class="sub">Learn English words!</p>
+  <button class="big-btn" onclick="startGame()">▶ PLAY</button>
+</div>
+
+<div id="game" class="screen">
+  <div class="top"><span id="progress">1 / 10</span><span id="score">⭐ 0</span></div>
+  <div id="pic" onclick="sayCurrent()">🐱</div>
+  <div class="hint">🔊 tap the picture</div>
+  <div id="options"></div>
+</div>
+
+<div id="end" class="screen">
+  <div class="logo">🎉</div>
+  <h1>Great job!</h1>
+  <div id="stars"></div>
+  <button class="big-btn" onclick="startGame()">↻ PLAY AGAIN</button>
+</div>
+
+<script>
+const WORDS = [
+  ["cat","🐱"],["dog","🐶"],["apple","🍎"],["sun","☀️"],["car","🚗"],
+  ["fish","🐟"],["ball","⚽"],["house","🏠"],["tree","🌳"],["star","⭐"],
+  ["banana","🍌"],["bird","🐦"],["cow","🐮"],["flower","🌸"],["moon","🌙"],
+  ["book","📖"],["duck","🦆"],["pig","🐷"],["horse","🐴"],["cake","🎂"]
+];
+const ROUNDS = 10;
+let deck = [], round = 0, score = 0, current = null, locked = false, firstTry = true;
+
+function speak(t) { try { if (window.Android) Android.speak(t); } catch (e) {} }
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
+
+function startGame() {
+  deck = shuffle(WORDS).slice(0, ROUNDS); round = 0; score = 0;
+  show('game'); next();
+}
+
+function next() {
+  if (round >= ROUNDS) return finish();
+  current = deck[round]; locked = false; firstTry = true;
+  document.getElementById('progress').textContent = (round + 1) + ' / ' + ROUNDS;
+  document.getElementById('score').textContent = '⭐ ' + score;
+  document.getElementById('pic').textContent = current[1];
+  const wrong = shuffle(WORDS.filter(w => w[0] !== current[0])).slice(0, 2);
+  const box = document.getElementById('options'); box.innerHTML = '';
+  shuffle([current, ...wrong]).forEach(w => {
+    const b = document.createElement('button');
+    b.className = 'opt'; b.textContent = w[0];
+    b.onclick = () => pick(b, w);
+    box.appendChild(b);
+  });
+  setTimeout(sayCurrent, 300);
+}
+
+function sayCurrent() {
+  const p = document.getElementById('pic');
+  p.classList.add('pop'); setTimeout(() => p.classList.remove('pop'), 200);
+  speak(current[0]);
+}
+
+function pick(btn, w) {
+  if (locked) return;
+  if (w[0] === current[0]) {
+    locked = true; btn.classList.add('ok');
+    if (firstTry) score++;
+    document.getElementById('score').textContent = '⭐ ' + score;
+    speak(firstTry ? 'Yes! ' + current[0] : current[0]);
+    setTimeout(() => { round++; next(); }, 1300);
+  } else {
+    firstTry = false; btn.classList.add('bad');
+    speak('Try again');
+    setTimeout(() => btn.classList.remove('bad'), 450);
+  }
+}
+
+function finish() {
+  document.getElementById('stars').textContent = '⭐'.repeat(score) + (score ? '' : '💪') + '\n' + score + ' / ' + ROUNDS;
+  show('end'); speak('Great job!');
+}
+</script>
+</body>
+</html>
