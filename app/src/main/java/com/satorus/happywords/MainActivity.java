@@ -9,6 +9,7 @@ import android.view.WindowInsets;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.widget.FrameLayout;
 
 import java.util.Locale;
 
@@ -39,7 +40,11 @@ public class MainActivity extends Activity {
         webView.addJavascriptInterface(new Bridge(), "Android");
 
         // Edge-to-edge (obligatorio con targetSdk 35+): respetar barras del sistema.
-        webView.setOnApplyWindowInsetsListener((v, insets) -> {
+        // El padding va en un contenedor porque WebView no respeta su propio padding.
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(0xFFFFF6D6);
+        root.addView(webView, new FrameLayout.LayoutParams(-1, -1));
+        root.setOnApplyWindowInsetsListener((v, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
                 Insets i = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
                 v.setPadding(i.left, i.top, i.right, i.bottom);
@@ -50,7 +55,7 @@ public class MainActivity extends Activity {
             return insets;
         });
 
-        setContentView(webView);
+        setContentView(root);
         webView.loadUrl("file:///android_asset/index.html");
     }
 
